@@ -58,7 +58,8 @@ func GetDnslog(id string) string {
                 data["ip"]=y[1]
                 data["subdomain"]=y[2]
                 res[i] = data
-                i++
+				i++
+				data = make(map[string]string)
             }
             
         }
