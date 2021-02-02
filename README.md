@@ -22,7 +22,7 @@
 
 5. 运行
 
-   `go run main.go yourdomain` 可先在shell前台运行，看功能是否正常使用。如果没问题的话 直接 `nohup go run main.go yourdomain &`
+   先`go get github.com/miekg/dns` 获取需要的库。`go run main.go yourdomain` 可先在shell前台运行，看功能是否正常使用。如果没问题的话 直接 `nohup go run main.go yourdomain &`
 
    （第一次运行需要到github拖miekg/dns库，所以需要你的服务器能上github）
 
