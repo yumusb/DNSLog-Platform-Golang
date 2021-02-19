@@ -17,18 +17,8 @@ import (
 )
 
 var ip string
+var tmplogdir string
 
-var tmplogdir = "/tmp/dnslog/"
-var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-var topDomain string
-
-func randSeq(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -38,6 +28,30 @@ func Exists(path string) bool {
 		return false
 	}
 	return true
+}
+
+func checkdir() {
+	localdir, _ := os.Getwd()
+	tmplogdir = localdir + "/dnslog/" //DNS日志存放目录,可自行更改。
+	if !Exists(tmplogdir) {
+		log.Print("Path `" + tmplogdir + " `is not exists,will try to create")
+		err := os.MkdirAll(tmplogdir, 0666)
+		if err != nil {
+			fmt.Println(err)
+			log.Fatal("Path `" + tmplogdir + " create fail. Please Create It.")
+		}
+	}
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var topDomain string
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func GetDnslog(id string) string {
@@ -84,166 +98,9 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		key := randSeq(8)
 		res = key + "." + topDomain
 	} else {
-		res = `<!DOCTYPE html>
-		<html>
-		  <head>
-			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-			<title>DNSLOG Platform</title>
-			<meta name="keywords" content="dnslog，dnslog平台" />
-			<meta name="description" content="一个无需注册就可以快速使用的DNSLog平台" />
-		  </head>
-		  <style>
-			td {
-			  text-align: center;
-			  margin: auto;
-			}
-		  </style>
-		  <body>
-			<div id="header" style="text-align: center; padding-top: 2%%">
-			  <p style="font-size: 30px">DNSLOG 平台</p>
-			  <hr style="height: 2px; border: none; border-top: 2px dashed #87cefa" />
-			  <br />
-			</div>
-			<script>
-			  function getCookie(cname) {
-				var name = cname + "=";
-				var ca = document.cookie.split(";");
-				for (var i = 0; i < ca.length; i++) {
-				  var c = ca[i].trim();
-				  if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
-				}
-				return "";
-			  }
-			  function GetDomain() {
-				key = getCookie("key");
-				if (key != "") {
-				  if (
-					confirm("获取新的子域名后将会丢失 " + key + "，请注意保存") != true
-				  ) {
-					return false;
-				  }
-				}
-				var xmlhttp;
-				if (window.XMLHttpRequest) {
-				  xmlhttp = new XMLHttpRequest();
-				} else {
-				  xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-				}
-				xmlhttp.onreadystatechange = function () {
-				  if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-					document.cookie = "key=" + xmlhttp.responseText;
-					document.getElementById("myDomain").innerHTML =
-					  xmlhttp.responseText;
-				  }
-				};
-				xmlhttp.open("GET", "/new_gen?t=" + Math.random(), true);
-				xmlhttp.send();
-			  }
-		
-			  function GetRecords() {
-				var xmlhttp;
-				if (window.XMLHttpRequest) {
-				  xmlhttp = new XMLHttpRequest();
-				} else {
-				  xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-				}
-				xmlhttp.onreadystatechange = function () {
-				  if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-					var abc = xmlhttp.responseText;
-					obj = JSON.parse(abc);
-					if (obj == "" || obj == null) {
-					  ktable =
-						'<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr><td colspan="3" align="center">No Data</td>';
-					  document.getElementById("myRecords").innerHTML = ktable;
-					} else {
-					  table =
-						'<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr>';
-					  
-					  for (var obj1 = Object.keys(obj).length - 1; obj1 >= ((Object.keys(obj).length-10)>0?(Object.keys(obj).length-10):0); obj1--) {
-						table =
-						  table +
-						  "<tr><td>" +
-						  obj[obj1]["subdomain"] +
-						  "</td><td>" +
-						  obj[obj1]["ip"] +
-						  "</td>" +
-						  "<td>" +
-						  obj[obj1]["time"] +
-						  "</td></tr>";
-					  }
-					  document.getElementById("myRecords").innerHTML = table;
-					}
-				  }
-				};
-				xmlhttp.open(
-				  "GET",
-				  "/" +
-					document.cookie
-					  .substr(document.cookie.indexOf("key="), 12)
-					  .substr(4, 12) +
-					"?t=" +
-					Math.random(),
-				  true
-				);
-				xmlhttp.send();
-			  }
-			</script>
-			<div id="content" style="text-align: center">
-			  <button type="button" onclick="GetDomain()">Get SubDomain</button>
-			  <button type="button" onclick="GetRecords()">Refresh Record</button
-			  ><br /><br />
-			  <div id="myDomain">&nbsp;</div>
-			  <br />
-			  <center>
-				<table
-				  id="myRecords"
-				  width="700"
-				  border="0"
-				  cellpadding="5"
-				  cellspacing="1"
-				  bgcolor="#EFF3FF"
-				  style="word-break: break-all; word-wrap: break-all"
-				>
-				  <tr bgcolor="#ADD3EF">
-					<th width="45%%">DNS Query Record</th>
-					<th width="30%%">IP Address</th>
-					<th width="25%%">Created Time</th>
-				  </tr>
-				  <tr>
-					<td colspan="3" align="center">No Data</td>
-				  </tr>
-				</table>
-			  </center>
-			</div>
-			<script>
-			  key = getCookie("key");
-			  if (key != "") {
-				document.getElementById("myDomain").innerHTML = key;
-			  }
-			</script>
-		  </body>
-		  <div
-			style="
-			  text-align: center;
-			  margin: 0px auto;
-			  bottom: 100px;
-			  width: 99.6%%;
-			  padding-top: 3%%;
-			"
-		  >
-			<hr style="height: 2px; border: none; border-top: 2px dashed #87cefa" />
-			<br />
-			<center>
-			  <span style="color: #add3ef"
-				>Copyright © 2021 DNSLOG Platform All Rights Reserved.</span
-			  >
-			</center>
-		  </div>
-		</html>
-		`
+		res = `<!DOCTYPE html><html><head><meta http-equiv="Content-Type"content="text/html; charset=utf-8"/><title>DNSLOG Platform</title><meta name="keywords"content="dnslog,dnslog平台"/><meta name="description"content="一个无需注册就可以快速使用的DNSLog平台"/><style>td{text-align:center;margin:auto}</style></head><body><div id="header"style="text-align: center; padding-top: 2%%"><p style="font-size: 30px">DNSLOG平台</p><hr style="height: 2px; border: none; border-top: 2px dashed #87cefa"/><br/></div><script>function getCookie(cname){var name=cname+"=";var ca=document.cookie.split(";");for(var i=0;i<ca.length;i++){var c=ca[i].trim();if(c.indexOf(name)==0)return c.substring(name.length,c.length)}return""}function GetDomain(){key=getCookie("key");if(key!=""){if(confirm("获取新的子域名后将会丢失 "+key+"，请注意保存")!=true){return false}}var xmlhttp;if(window.XMLHttpRequest){xmlhttp=new XMLHttpRequest()}else{xmlhttp=new ActiveXObject("Microsoft.XMLHTTP")}xmlhttp.onreadystatechange=function(){if(xmlhttp.readyState==4&&xmlhttp.status==200){document.cookie="key="+xmlhttp.responseText;document.getElementById("myDomain").innerHTML=xmlhttp.responseText}};xmlhttp.open("GET","/new_gen?t="+Math.random(),true);xmlhttp.send()}function GetRecords(){var xmlhttp;if(window.XMLHttpRequest){xmlhttp=new XMLHttpRequest()}else{xmlhttp=new ActiveXObject("Microsoft.XMLHTTP")}xmlhttp.onreadystatechange=function(){if(xmlhttp.readyState==4&&xmlhttp.status==200){var abc=xmlhttp.responseText;obj=JSON.parse(abc);if(obj==""||obj==null){ktable='<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr><td colspan="3" align="center">No Data</td>';document.getElementById("myRecords").innerHTML=ktable}else{table='<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr>';for(var obj1=Object.keys(obj).length-1;obj1>=((Object.keys(obj).length-10)>0?(Object.keys(obj).length-10):0);obj1--){table=table+"<tr><td>"+obj[obj1]["subdomain"]+"</td><td>"+obj[obj1]["ip"]+"</td><td>"+obj[obj1]["time"]+"</td></tr>"}document.getElementById("myRecords").innerHTML=table}}};xmlhttp.open("GET","/"+document.cookie.substr(document.cookie.indexOf("key="),12).substr(4,12)+"?t="+Math.random(),true);xmlhttp.send()}</script><div id="content"style="text-align: center"><button type="button"onclick="GetDomain()">Get SubDomain</button><button type="button"onclick="GetRecords()">Refresh Record</button><br/><br/><div id="myDomain">&nbsp;</div><br/><center><table id="myRecords"width="700"border="0"cellpadding="5"cellspacing="1"bgcolor="#EFF3FF"style="word-break: break-all; word-wrap: break-all"><tbody><tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr><tr><td colspan="3"align="center">No Data</td></tr></tbody></table></center></div><script>key=getCookie("key");if(key!=""){document.getElementById("myDomain").innerHTML=key}</script><div style="text-align: center;margin: 0px auto;bottom: 100px;width: 99.6%%;padding-top: 3%%;"><hr style="height: 2px; border: none; border-top: 2px dashed #87cefa"/><br/><center><span style="color: #add3ef">Copyright&copy;2021 DNSLOG Platform All Rights Reserved.</span></center></div></body></html>`
 
 	}
-
 	fmt.Fprintf(w, res)
 }
 
@@ -292,9 +149,7 @@ func (tun *Tunnel) listenDomains() {
 					buf := []byte(fd_content)
 					fd.Write(buf)
 					fd.Close()
-
 				}
-
 			}()
 		}
 	}
@@ -332,8 +187,9 @@ func main() {
 	maxMessageSize := flag.Int("maxMessageSize", 5000, "maximum encoded size (in bytes) of a message")
 	flag.Parse()
 	if flag.NArg() != 1 {
-		log.Fatal("tunnel accepts exactly one argument for the top domain")
+		log.Fatal("Dnslog Platform requires a domain name parameter, such as `dns1.tk` or `go.dns1.tk`, And check your domain's ns server point to this server")
 	}
+	checkdir()
 	topDomain = dns.Fqdn(flag.Arg(0))
 	expirationDuration := time.Duration(*expiration) * time.Second
 	tun := NewTunnel(topDomain, expirationDuration, *maxMessageSize)
@@ -350,10 +206,8 @@ func main() {
 			log.Fatalf("Failed to set tcp listener %s\n", err.Error())
 		}
 	}()
-
+	log.Print("Everything is ok, Let's Begin")
 	http.HandleFunc("/", HelloHandler)
 	http.ListenAndServe("localhost:8000", nil)
-	log.Print("Begin Http Server")
 	select {} // block foreve
-
 }
