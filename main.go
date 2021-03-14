@@ -92,7 +92,7 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	res := "Hello World"
 	if len(r.URL.Path) == 9 {
 		w.Header().Set("Content-Type", "application/json")
-		res = GetDnslog(r.URL.Path)
+		res = GetDnslog(strings.ToLower(r.URL.Path)) //域名不需要区分大小写。所以此处直接转为小写。
 	} else if r.URL.Path == "/new_gen" {
 		rand.Seed(time.Now().UnixNano())
 		key := randSeq(8)
