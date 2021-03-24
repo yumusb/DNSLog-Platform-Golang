@@ -4,7 +4,7 @@
 
 ## 部署
 
-1. 选择你喜欢的方式下载本目录下的main.go文件
+1. 克隆或者下载本仓库到你的服务器上
 
    不多说。
 
@@ -18,9 +18,27 @@
 
 4. 尝试运行
 
-   先`go get github.com/miekg/dns` 获取需要的库。`go run main.go yourdomain` 可先在shell前台运行，看功能是否正常使用与检查数据存放目录是否成功创建。如果没问题的话 直接 `nohup go run main.go yourdomain &`
+   ~~先`go get github.com/miekg/dns` 获取需要的库。~~改用了mod形式。（方便在国内机器部署）
 
-   （第一次运行需要到github拖miekg/dns库，所以需要你的服务器能上github）
+   先执行
+   
+   ```shell
+   $ go env -w GO111MODULE=on
+   $ go env -w GOPROXY=https://goproxy.cn,direct #可选，国内机器不能上github则需要设置{代}{理}
+   ```
+   
+   而后`go run main.go`即可看到如下字样，说明已经正常拉取需要的库。
+   
+   ```shell
+   [root@centos dnslog]# go run main.go 
+   go: downloading github.com/miekg/dns v1.1.41
+   go: downloading golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+   go: downloading golang.org/x/sys v0.0.0-20210303074136-134d130e1a04
+   2021/03/24 13:58:54 Dnslog Platform requires a domain name parameter, such as `dns1.tk` or `go.dns1.tk`, And check your domain's ns server point to this server
+   exit status 1
+   ```
+   
+   `go run main.go yourdomain` 可先在shell前台运行，看功能是否正常使用与检查数据存放目录是否成功创建。如果没问题的话 直接 `nohup go run main.go yourdomain &`
 
 ## 使用
 
