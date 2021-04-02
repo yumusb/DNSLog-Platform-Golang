@@ -18,13 +18,12 @@
 
 4. 尝试运行
 
-   ~~先`go get github.com/miekg/dns` 获取需要的库。~~改用了mod形式。（方便在国内机器部署）
 
    先执行
    
    ```shell
    $ go env -w GO111MODULE=on
-   $ go env -w GOPROXY=https://goproxy.cn,direct #可选，国内机器不能上github则需要设置{代}{理}
+   $ go env -w GOPROXY=https://goproxy.cn,direct #可选，国内机器不能上github则需要执行此处以设置{代}{理}
    ```
    
    而后`go run main.go`即可看到如下字样，说明已经正常拉取需要的库。
