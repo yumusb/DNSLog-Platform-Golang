@@ -29,7 +29,7 @@
    而后`go run main.go`即可看到如下字样，说明已经正常拉取需要的库。
    
    ```shell
-   [root@centos dnslog]# go run main.go 
+   [root@centos dnslog] go run main.go 
    go: downloading github.com/miekg/dns v1.1.41
    go: downloading golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
    go: downloading golang.org/x/sys v0.0.0-20210303074136-134d130e1a04
