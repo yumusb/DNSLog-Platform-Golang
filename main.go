@@ -139,7 +139,7 @@ func (tun *Tunnel) listenDomains() {
 				tun.fgListsLock.Lock()
 				defer tun.fgListsLock.Unlock()
 				idkeys := strings.Split(domain[0:len(domain)-len(tun.topDomain)-1], ".")
-				idkey := idkeys[len(idkeys)-1]
+				idkey := strings.ToLower(idkeys[len(idkeys)-1])
 				//log.Print(idkey)
 				if len(idkey) == 8 {
 					fd, _ := os.OpenFile(tmplogdir+idkey, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
