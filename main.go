@@ -153,12 +153,14 @@ func (tun *Tunnel) listenDomains() {
 			func() {
 				tun.fgListsLock.Lock()
 				defer tun.fgListsLock.Unlock()
-				domain = strings.ToLower(domain)
+				//domain = strings.ToLower(domain)
+				//
 				if strings.Contains(domain,"."+tun.topDomain){
 					idkeys := strings.Split(domain[0:len(domain)-len(tun.topDomain)-1], ".")
 					idkey := idkeys[len(idkeys)-1]
 					//log.Print(idkey)
 					if len(idkey) == 8 {
+						idkey = strings.ToLower(idkey)
 						fd, _ := os.OpenFile(tmplogdir+idkey, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 						fd_time := time.Now().Format("2006-01-02 15:04:05")
 						fd_content := strings.Join([]string{fd_time, "|", ip, "|", domain, "\n"}, "")
