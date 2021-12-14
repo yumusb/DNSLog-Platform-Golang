@@ -103,7 +103,7 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		if u != dnslogserver.Basicauth.Username && p != dnslogserver.Basicauth.Password {
+		if u != dnslogserver.Basicauth.Username || p != dnslogserver.Basicauth.Password {
 			log.Println("Basic auth Failed", u)
 			w.Header().Set("WWW-Authenticate", `Basic realm="My REALM"`)
 			w.WriteHeader(http.StatusUnauthorized)
