@@ -4,9 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -16,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/miekg/dns"
 )
 
 var ip string
@@ -24,31 +25,30 @@ var tmplogdir string
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
+		return os.IsExist(err)
 	}
 	return true
 }
 
 func checkdir() {
 	localdir, _ := os.Getwd()
-	tmplogdir = localdir + string(os.PathSeparator)+"dnslog"+string(os.PathSeparator) //DNS日志存放目录,可自行更改。
+	tmplogdir = localdir + string(os.PathSeparator) + "dnslog" + string(os.PathSeparator) //DNS日志存放目录,可自行更改。
 	if !Exists(tmplogdir) {
 		log.Print("Path `" + tmplogdir + " `is not exists,will try to create")
 		err := os.MkdirAll(tmplogdir, 0666)
 		if err != nil {
 			fmt.Println(err)
 			log.Fatal("Path `" + tmplogdir + " create fail. Please Create It.")
+			os.Exit(1)
 		}
 	}
 }
-func md5sum(str string) string  {
-    h := md5.New()
-    h.Write([]byte(str))
-    return hex.EncodeToString(h.Sum(nil))
+func md5sum(str string) string {
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
 }
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var topDomain string
 
@@ -71,7 +71,7 @@ func GetDnslog(id string) string {
 		res := make(map[int]map[string]string)
 		data := make(map[string]string)
 		i := 0
-		y := []string{}
+		var y []string
 		for _, x := range strings.Split(content, "\n") {
 			if len(x) > 5 {
 				y = strings.Split(x, "|")
@@ -95,14 +95,31 @@ func GetDnslog(id string) string {
 }
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
 
+	if dnslogserver.Basicauth.Check {
+		u, p, ok := r.BasicAuth()
+		if !ok {
+			log.Println("Error parsing basic auth")
+			w.Header().Set("WWW-Authenticate", `Basic realm="My REALM"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if u != dnslogserver.Basicauth.Username && p != dnslogserver.Basicauth.Password {
+			log.Println("Basic auth Failed", u)
+			w.Header().Set("WWW-Authenticate", `Basic realm="My REALM"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	}
+
 	res := "Hello World"
 	if len(r.URL.Path) == 13 {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-control", "no-store")
 		id := md5sum(strings.ToLower(r.URL.Path)[1:13])[0:8]
 		res = GetDnslog(id)
-		
 	} else if r.URL.Path == "/new_gen" {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-control", "no-store")
 		rand.Seed(time.Now().UnixNano())
 		token := randSeq(12)
 		key := md5sum(token)[0:8]
@@ -112,11 +129,14 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		data["domain"] = key + "." + topDomain
 		enc, _ := json.Marshal(data)
 		res = string(enc)
-		
+
 	} else {
-		res = `<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>DNSLOG Platform</title><meta name="keywords" content="dnslog,dnslog平台"><meta name="description" content="一个无需注册就可以快速使用的DNSLog平台"><style>td{text-align:center;margin:auto}#domainarea p{display:inline-block}</style></head><body><div id="header" style="text-align:center;padding-top:2%%"><p style="font-size:30px">DNSLOG平台</p><hr style="height:2px;border:none;border-top:2px dashed #87cefa"><br></div><script>function getCookie(e){for(var t=e+"=",n=document.cookie.split(";"),o=0;o<n.length;o++){var r=n[o].trim();if(0==r.indexOf(t))return r.substring(t.length,r.length)}return""}function GetDomain(){if(key=getCookie("key"),""!=key&&1!=confirm("获取新的子域名后将会丢失 "+key+"，请注意保存"))return!1;var e=window.XMLHttpRequest?new XMLHttpRequest:new ActiveXObject("Microsoft.XMLHTTP");e.responseType="json",e.onreadystatechange=function(){4==e.readyState&&200==e.status&&(document.cookie="key="+e.response.domain,document.cookie="token="+e.response.token,document.getElementById("myDomain").innerHTML=e.response.domain,document.getElementById("token").innerHTML=e.response.token)},e.open("GET","/new_gen?t="+Math.random(),!0),e.send()}function GetRecords(){var n=window.XMLHttpRequest?new XMLHttpRequest:new ActiveXObject("Microsoft.XMLHTTP");n.onreadystatechange=function(){if(4==n.readyState&&200==n.status){var e=n.responseText;if(""==e||null==e||"null"==e)ktable='<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr><td colspan="3" align="center">No Data</td>',document.getElementById("myRecords").innerHTML=ktable;else{obj=JSON.parse(e),table='<tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr>';for(var t=Object.keys(obj).length-1;t>=(0<Object.keys(obj).length-10?Object.keys(obj).length-10:0);t--)table=table+"<tr><td>"+obj[t].subdomain+"</td><td>"+obj[t].ip+"</td><td>"+obj[t].time+"</td></tr>";document.getElementById("myRecords").innerHTML=table}}},n.open("GET","/"+getCookie("token")+"?t="+Math.random(),!0),n.send()}</script><div id="content" style="text-align:center"><button type="button" onclick="GetDomain()">Get SubDomain</button><button type="button" onclick="GetRecords()">Refresh Record</button><br><div id="domainarea">🌐:<p id="myDomain"></p>&nbsp;&nbsp;🔑:<p id="token"></p></div><center><table id="myRecords" width="700" border="0" cellpadding="5" cellspacing="1" bgcolor="#EFF3FF" style="word-break:break-all;word-wrap:break-all"><tbody><tr bgcolor="#ADD3EF"><th width="45%%">DNS Query Record</th><th width="30%%">IP Address</th><th width="25%%">Created Time</th></tr><tr><td colspan="3" align="center">No Data</td></tr></tbody></table></center></div><script>key=getCookie("key"),token=getCookie("token"),""!=key&&""!=token&&(document.getElementById("myDomain").innerHTML=key,document.getElementById("token").innerHTML=token,GetRecords())</script><div style="text-align:center;margin:0 auto;bottom:100px;width:99.6%%;padding-top:3%%"><hr style="height:2px;border:none;border-top:2px dashed #87cefa"><br><center><span style="color:#add3ef">Copyright&copy;2021 DNSLOG Platform All Rights Reserved.</span></center></div></body></html>`
+		res = templatehtml
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	}
-	fmt.Fprintf(w, res)
+	w.Header().Set("X-Powered-By", "https://github.com/yumusb/DNSLog-Platform-Golang")
+	w.Write([]byte(res))
+
 }
 
 type Tunnel struct {
@@ -155,7 +175,7 @@ func (tun *Tunnel) listenDomains() {
 				defer tun.fgListsLock.Unlock()
 				//domain = strings.ToLower(domain)
 				//
-				if strings.Contains(domain,"."+tun.topDomain){
+				if strings.Contains(domain, "."+tun.topDomain) {
 					idkeys := strings.Split(domain[0:len(domain)-len(tun.topDomain)-1], ".")
 					idkey := idkeys[len(idkeys)-1]
 					//log.Print(idkey)
@@ -170,7 +190,7 @@ func (tun *Tunnel) listenDomains() {
 						fd.Close()
 					}
 				}
-				
+
 			}()
 		}
 	}
@@ -192,7 +212,7 @@ func (tun *Tunnel) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	m.Answer = []dns.RR{
 		&dns.CNAME{
 			Hdr:    dns.RR_Header{Name: domain, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: 0},
-			Target: "blackhole-1.iana.org.",
+			Target: cname,
 		},
 	}
 	err := w.WriteMsg(m)
@@ -201,34 +221,80 @@ func (tun *Tunnel) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 
+type server struct {
+	Backend   back  `toml:"back"`
+	Frontend  front `toml:"front"`
+	Basicauth basic `toml:"basicauth"`
+}
+type front struct {
+	Template string `toml:"template"`
+}
+type back struct {
+	Listenhost string   `toml:"listenhost"`
+	Listenport int      `toml:"listenport"`
+	Domains    []string `toml:"domains"`
+	Cname      string   `toml:"cname"`
+}
+
+type basic struct {
+	Check    bool   `toml:"check"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+}
+
+var dnslogserver server
+var templatehtml string
+var cname string
+
 func main() {
 
-	port := flag.Int("port", 53, "port to run on")
-	expiration := flag.Int("expiration", 60, "seconds an incomplete message is retained before it is deleted")
-	maxMessageSize := flag.Int("maxMessageSize", 5000, "maximum encoded size (in bytes) of a message")
-	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("Dnslog Platform requires a domain name parameter, such as `dns1.tk` or `go.dns1.tk`, And check your domain's ns server point to this server")
+	configfile := "config.toml"
+	if _, err := toml.DecodeFile(configfile, &dnslogserver); err != nil {
+		log.Fatal(err)
+		os.Exit(1)
 	}
+	//log.Println(dnslogserver.Backend.Domains)
+
+	cname = dns.Fqdn(dnslogserver.Backend.Cname)
+	log.Println("Will cname to ", cname)
+
+	content, err := ioutil.ReadFile(dnslogserver.Frontend.Template)
+	if err != nil {
+		panic(err)
+	}
+	templatehtml = string(content)
+	port := 53
+	expiration := 60
+	maxMessageSize := 5000
+
 	checkdir()
-	topDomain = dns.Fqdn(strings.ToLower(flag.Arg(0)))
-	expirationDuration := time.Duration(*expiration) * time.Second
-	tun := NewTunnel(topDomain, expirationDuration, *maxMessageSize)
+	topDomain = dns.Fqdn(strings.ToLower(dnslogserver.Backend.Domains[0]))
+	log.Println("OK, Your Dnslog Domain is :", topDomain)
+
+	if dnslogserver.Basicauth.Check {
+		log.Println("BasicAuth is open")
+		log.Println("BasicAuth Username:", dnslogserver.Basicauth.Username)
+		log.Println("BasicAuth Password:", dnslogserver.Basicauth.Password)
+	}
+	expirationDuration := time.Duration(expiration) * time.Second
+	tun := NewTunnel(topDomain, expirationDuration, maxMessageSize)
 	dns.Handle(topDomain, tun)
 	go func() {
-		srv := &dns.Server{Addr: ":" + strconv.Itoa(*port), Net: "udp"}
+		srv := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatalf("Failed to set udp listener %s\n", err.Error())
 		}
 	}()
 	go func() {
-		srv := &dns.Server{Addr: ":" + strconv.Itoa(*port), Net: "tcp"}
+		srv := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "tcp"}
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatalf("Failed to set tcp listener %s\n", err.Error())
 		}
 	}()
-	log.Print("Everything is ok, Let's Begin")
+	log.Print("Let's Begin!")
 	http.HandleFunc("/", HelloHandler)
-	http.ListenAndServe("localhost:8000", nil)
+	listenserver := dnslogserver.Backend.Listenhost + ":" + strconv.Itoa(dnslogserver.Backend.Listenport)
+	log.Println("OK, Will listen in ", listenserver)
+	http.ListenAndServe(listenserver, nil)
 	select {} // block foreve
 }

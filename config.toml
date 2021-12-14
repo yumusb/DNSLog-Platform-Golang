@@ -1,0 +1,11 @@
+[front]
+template = "index.html"
+[back]
+listenhost = "0.0.0.0"
+listenport = 8000
+domains = [ "ns.bypass.com" ]
+cname = "www.baidu.com"
+[basicauth]
+check = false
+username = "yumu"
+password = "yumusb"

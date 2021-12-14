@@ -1,0 +1,80 @@
+<!--by https://github.com/yumusb/DNSLog-Platform-Golang -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>DNSLOG Platform</title>
+    <meta name="keywords" content="dnslog,dnslog平台">
+    <meta name="description" content="一个无需注册就可以快速使用的DNSLog平台">
+    <style>
+        td {
+            text-align: center;
+            margin: auto
+        }
+        #domainarea p {
+            display: inline-block
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header" style="text-align:center;padding-top:2%">
+        <p style="font-size:30px">DNSLOG平台</p>
+        <hr style="height:2px;border:none;border-top:2px dashed #87cefa"><br>
+    </div>
+    <script>
+    
+    function GetDomain() {
+    	if (key = localStorage.getItem("key"), null != key && 1 != confirm("获取新的子域名后将会丢失 " + key + "，请注意保存")) return !1;
+    	var e = window.XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP");
+    	e.responseType = "json", e.onreadystatechange = function() {
+    		4 == e.readyState && 200 == e.status && (localStorage.setItem('key',e.response.domain), localStorage.setItem('token',e.response.token), document.getElementById("myDomain").innerHTML = e.response.domain, document.getElementById("token").innerHTML = e.response.token)
+    	}, e.open("GET", "/new_gen?t=" + Math.random(), !0), e.send()
+    }
+    function GetRecords() {
+        if(localStorage.getItem("token")==null){
+            alert("Get Domain First!!")
+            return ;
+        }
+    	var n = window.XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP");
+    	n.onreadystatechange = function() {
+    		if (4 == n.readyState && 200 == n.status) {
+    			var e = n.responseText;
+    			if ("" == e || null == e || "null" == e) ktable = '<tr bgcolor="#ADD3EF"><th width="45%">DNS Query Record</th><th width="30%">IP Address</th><th width="25%">Created Time</th></tr><td colspan="3" align="center">No Data</td>', document.getElementById("myRecords").innerHTML = ktable;
+    			else {
+    				obj = JSON.parse(e), table = '<tr bgcolor="#ADD3EF"><th width="45%">DNS Query Record</th><th width="30%">IP Address</th><th width="25%">Created Time</th></tr>';
+    				for (var t = Object.keys(obj).length - 1; t >= (0 < Object.keys(obj).length - 10 ? Object.keys(obj).length - 10 : 0); t--) table = table + "<tr><td>" + obj[t].subdomain + "</td><td>" + obj[t].ip + "</td><td>" + obj[t].time + "</td></tr>";
+    				document.getElementById("myRecords").innerHTML = table
+    			}
+    		}
+    	}, n.open("GET", "/" + localStorage.getItem("token") + "?t=" + Math.random(), !0), n.send()
+    } </script>
+
+    <div id="content" style="text-align:center"><button type="button" onclick="GetDomain()">Get
+            SubDomain</button><button type="button" onclick="GetRecords()">Refresh Record</button><br>
+        <div id="domainarea">🌐:<p id="myDomain"></p>&nbsp;&nbsp;🔑:<p id="token"></p>
+        </div>
+        <center>
+            <table id="myRecords" width="700" border="0" cellpadding="5" cellspacing="1" bgcolor="#EFF3FF"
+                style="word-break:break-all;word-wrap:break-all">
+                <tbody>
+                    <tr bgcolor="#ADD3EF">
+                        <th width="45%">DNS Query Record</th>
+                        <th width="30%">IP Address</th>
+                        <th width="25%">Created Time</th>
+                    </tr>
+                    <tr>
+                        <td colspan="3" align="center">No Data</td>
+                    </tr>
+                </tbody>
+            </table>
+        </center>
+    </div>
+    <script>key = localStorage.getItem("key"), token = localStorage.getItem("token"), null != key && null != token && (document.getElementById("myDomain").innerHTML = key, document.getElementById("token").innerHTML = token, GetRecords())</script>
+    <div style="text-align:center;margin:0 auto;bottom:100px;width:99.6%;padding-top:3%">
+        <hr style="height:2px;border:none;border-top:2px dashed #87cefa"><br>
+        <center><span style="color:#add3ef">Copyright&copy;2021 DNSLOG Platform All Rights Reserved.</span></center>
+    </div>
+</body>
+
+</html>

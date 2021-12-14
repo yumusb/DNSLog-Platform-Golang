@@ -1,14 +1,31 @@
 # DNSLog-Platform-Golang
 
-相信DNSLog平台已经是安全从业者的标配。而公开的DNSLOG平台域名早已进入流量监控设备的规则库。同时也有隐私问题值得关注。于是撸了（凑了）一个一键搭建Dnslog平台的golang版本。可以使用其一键搭建自己的Dnslog平台。由于是作者的第一个golang程序，难免会有一些小问题。不过 他真的是一键！
+相信DNSLog平台已经是安全从业者的标配。而公开的DNSLOG平台域名早已进入流量监控设备的规则库。同时也有隐私问题值得关注。于是撸了（凑了）一个一键搭建Dnslog平台的golang版本。可以使用其一键搭建自己的Dnslog平台。
 
 ## 部署
 
-1. 克隆或者下载本仓库到你的服务器上
+1. 克隆本仓库到你的服务器上
 
-2. 决定是否开放公网访问？
+2. 修改配置文件(config.toml)
 
-   倒数第几行中的`http.ListenAndServe("localhost:8000", nil) `，这样写的话只能通过localhost进行访问，墙裂建议不要修改，而后通过中间件反向代理后对外开放，方便做访问控制、日志管理等。如果想直接对外开放的话可以修改为:`http.ListenAndServe(":8000", nil)`
+   ```toml 
+   [front]
+   template = "index.html"
+   [back]
+   listenhost = "0.0.0.0"
+   listenport = 8000
+   domains = [ "ns.bypass.com" ]
+   cname = "www.baidu.com"
+   [basicauth]
+   check = false
+   username = "yumu"
+   password = "yumusb"
+   ```
+   如小学英语老师教我们的那样。可以配置
+   1. 前端模板文件
+   2. 后端监听的主机、端口、域名、与CNAME响应
+   3. HTTP BASIC AUTH的是否打开（check=true）与密码配置
+   4. 本计划写多域名的，所以domains写成了一个列表
 
 3. 域名准备
 
@@ -22,18 +39,18 @@
    ```shell
    $ go env -w GO111MODULE=on
    $ go env -w GOPROXY=https://goproxy.cn,direct #可选，国内机器不能上github则需要执行此处以设置{代}{理}
-   $ go mod download github.com/miekg/dns  # 拉取需要的库
    ```
 
    而后`go run main.go`即可看到如下字样，说明已经可以正常运行。
 
    ```shell
    [root@centos dnslog] go run main.go 
-   2021/03/24 13:58:54 Dnslog Platform requires a domain name parameter, such as `dns1.tk` or `go.dns1.tk`, And check your domain's ns server point to this server
-   exit status 1
+   2021/12/14 12:30:53 Will cname to  www.baidu.com.
+   2021/12/14 12:30:53 OK, Your Dnslog Domain is : ns.bypass.com.
+   2021/12/14 12:30:53 Let's Begin!
+   2021/12/14 12:30:53 OK, Will listen in  0.0.0.0:8000
    ```
-
-   `go run main.go yourdomain` 可先在shell前台运行，看功能是否正常使用与检查数据存放目录是否成功创建。如果没问题的话 直接 `nohup go run main.go yourdomain &`
+   `go run main.go` 可先在shell前台运行，看功能是否正常使用与检查数据存放目录是否成功创建。如果没问题的话 直接 `nohup go run main.go &`
 
 ## 使用
 
@@ -69,15 +86,7 @@ PS：当然，你也可以通过 go build 打包成可执行文件进行跨平�
 
 ## 可定义的配置项
 
-1. 临时数据存放目录
-    ```go
-    localdir, _ := os.Getwd()
-    tmplogdir = localdir + string(os.PathSeparator)+"dnslog"+string(os.PathSeparator) //DNS日志存放目录,可自行更改。
-    ```
-
-2. html页面
-
-   HelloHandler方法中的res变量
+详见 config.toml
 
 ## 检查NS指向是否成功？
 
@@ -115,11 +124,8 @@ except:
 
 ## 更新日志：
 
+
++ 2021/12/14 在log4j2漏洞影响下，破100star。引入http basic auth，改为toml文件修改配置。
 + 2021/4/3 引入token机制，保证隐私性。
 
 + 1970-2021/4/2 初版本。
-
-## 其他
-
-感谢高学长给予的大力帮助：https://github.com/netchiso
-
