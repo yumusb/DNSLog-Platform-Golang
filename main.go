@@ -30,15 +30,19 @@ func Exists(path string) bool {
 	return true
 }
 
-func checkdir() {
-	localdir, _ := os.Getwd()
-	tmplogdir = localdir + string(os.PathSeparator) + "dnslog" + string(os.PathSeparator) //DNS日志存放目录,可自行更改。
-	if !Exists(tmplogdir) {
-		log.Print("Path `" + tmplogdir + " `is not exists,will try to create")
-		err := os.MkdirAll(tmplogdir, 0666)
+func checkdir(path string) {
+	logdir := ""
+	if path == tmplogdir {
+		logdir = tmplogdir + string(os.PathSeparator)
+	} else {
+		logdir = tmplogdir + string(os.PathSeparator) + path + string(os.PathSeparator)
+	}
+	if !Exists(logdir) {
+		log.Print("Path `" + logdir + " `is not exists,will try to create")
+		err := os.MkdirAll(logdir, 0666)
 		if err != nil {
 			fmt.Println(err)
-			log.Fatal("Path `" + tmplogdir + " create fail. Please Create It.")
+			log.Fatal("Path `" + logdir + " create fail. Please Create It.")
 			os.Exit(1)
 		}
 	}
@@ -50,7 +54,7 @@ func md5sum(str string) string {
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-var topDomain string
+var topDomain []string
 
 func randSeq(n int) string {
 	b := make([]rune, n)
@@ -60,9 +64,9 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func GetDnslog(id string) string {
+func GetDnslog(id string, domain string) string {
 	content := "content"
-	path := tmplogdir + string(os.PathSeparator) + id
+	path := tmplogdir + string(os.PathSeparator) + domain + string(os.PathSeparator) + id
 	if Exists(path) {
 		file, _ := os.Open(path)
 		defer file.Close()
@@ -89,9 +93,7 @@ func GetDnslog(id string) string {
 	} else {
 		content = "null"
 	}
-
 	return string(content)
-
 }
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -116,20 +118,40 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-control", "no-store")
 		id := md5sum(strings.ToLower(r.URL.Path)[1:13])[0:8]
-		res = GetDnslog(id)
-	} else if r.URL.Path == "/new_gen" {
+		domain := topDomain[0]
+		for _, tmpdomain := range topDomain {
+			if strings.ToLower(r.URL.Query().Get("domain")) == tmpdomain {
+				domain = tmpdomain
+				break
+			}
+		}
+
+		res = GetDnslog(id, domain)
+	} else if r.URL.Path == "/new_gen" || r.URL.Path == "/get_sub_domain" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-control", "no-store")
 		rand.Seed(time.Now().UnixNano())
 		token := randSeq(12)
 		key := md5sum(token)[0:8]
 		data := make(map[string]string)
+		data["domain"] = key + "." + topDomain[0]
+		for _, tmpdomain := range topDomain {
+			if strings.ToLower(r.URL.Query().Get("domain")) == tmpdomain {
+				data["domain"] = key + "." + tmpdomain
+				break
+			}
+		}
 		data["token"] = token
 		data["key"] = key
-		data["domain"] = key + "." + topDomain
+
 		enc, _ := json.Marshal(data)
 		res = string(enc)
 
+	} else if r.URL.Path == "/get_domain" {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-control", "no-store")
+		enc, _ := json.Marshal(topDomain)
+		res = string(enc)
 	} else {
 		res = templatehtml
 		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
@@ -143,12 +165,12 @@ type Tunnel struct {
 	Messages       chan string
 	cancel         chan struct{}
 	fgListsLock    sync.Mutex
-	topDomain      string
+	topDomain      []string
 	domains        chan string
 	maxMessageSize int
 }
 
-func NewTunnel(topDomain string, expiration time.Duration, maxMessageSize int) *Tunnel {
+func NewTunnel(topDomain []string, expiration time.Duration, maxMessageSize int) *Tunnel {
 	tun := &Tunnel{
 		Messages:       make(chan string, 256),
 		cancel:         make(chan struct{}),
@@ -174,20 +196,21 @@ func (tun *Tunnel) listenDomains() {
 				tun.fgListsLock.Lock()
 				defer tun.fgListsLock.Unlock()
 				//domain = strings.ToLower(domain)
-				//
-				if strings.Contains(domain, "."+tun.topDomain) {
-					idkeys := strings.Split(domain[0:len(domain)-len(tun.topDomain)-1], ".")
-					idkey := idkeys[len(idkeys)-1]
-					//log.Print(idkey)
-					if len(idkey) == 8 {
-						idkey = strings.ToLower(idkey)
-						fd, _ := os.OpenFile(tmplogdir+idkey, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-						fd_time := time.Now().Format("2006-01-02 15:04:05")
-						fd_content := strings.Join([]string{fd_time, "|", ip, "|", domain, "\n"}, "")
-						log.Print(fd_content)
-						buf := []byte(fd_content)
-						fd.Write(buf)
-						fd.Close()
+				for _, tmpdomain := range tun.topDomain {
+					if strings.Contains(domain, "."+tmpdomain) {
+						idkeys := strings.Split(domain[0:len(domain)-len(tmpdomain)-1], ".")
+						idkey := idkeys[len(idkeys)-1]
+						//log.Print(idkey)
+						if len(idkey) == 8 {
+							idkey = strings.ToLower(idkey)
+							fd, _ := os.OpenFile(tmplogdir+string(os.PathSeparator)+tmpdomain+string(os.PathSeparator)+idkey, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+							fd_time := time.Now().Format("2006-01-02 15:04:05")
+							fd_content := strings.Join([]string{fd_time, "|", ip, "|", domain, "\n"}, "")
+							log.Print(fd_content)
+							buf := []byte(fd_content)
+							fd.Write(buf)
+							fd.Close()
+						}
 					}
 				}
 
@@ -266,9 +289,10 @@ func main() {
 	port := 53
 	expiration := 60
 	maxMessageSize := 5000
-
-	checkdir()
-	topDomain = dns.Fqdn(strings.ToLower(dnslogserver.Backend.Domains[0]))
+	for _, tmpdomain := range dnslogserver.Backend.Domains {
+		topDomain = append(topDomain, dns.Fqdn(strings.ToLower(tmpdomain)))
+	}
+	//topDomain = dns.Fqdn(strings.ToLower(dnslogserver.Backend.Domains[0]))
 	log.Println("OK, Your Dnslog Domain is :", topDomain)
 
 	if dnslogserver.Basicauth.Check {
@@ -278,7 +302,13 @@ func main() {
 	}
 	expirationDuration := time.Duration(expiration) * time.Second
 	tun := NewTunnel(topDomain, expirationDuration, maxMessageSize)
-	dns.Handle(topDomain, tun)
+
+	tmplogdir = "dnslog"
+	checkdir(tmplogdir)
+	for _, tmpdomain := range topDomain {
+		dns.Handle(tmpdomain, tun)
+		checkdir(tmpdomain)
+	}
 	go func() {
 		srv := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
 		if err := srv.ListenAndServe(); err != nil {
@@ -292,9 +322,12 @@ func main() {
 		}
 	}()
 	log.Print("Let's Begin!")
-	http.HandleFunc("/", HelloHandler)
+	fs := http.FileServer(http.Dir("static"))
+	mux := http.NewServeMux()
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+	mux.HandleFunc("/", HelloHandler)
 	listenserver := dnslogserver.Backend.Listenhost + ":" + strconv.Itoa(dnslogserver.Backend.Listenport)
 	log.Println("OK, Will listen in ", listenserver)
-	http.ListenAndServe(listenserver, nil)
+	http.ListenAndServe(listenserver, mux)
 	select {} // block foreve
 }

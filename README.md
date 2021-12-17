@@ -14,7 +14,7 @@
    [back]
    listenhost = "0.0.0.0"
    listenport = 8000
-   domains = [ "ns.bypass.com" ]
+   domains = [ "dns.1433.eu.org","dns.bypass.eu.org"]
    cname = "www.baidu.com"
    [basicauth]
    check = false
@@ -25,7 +25,6 @@
    1. 前端模板文件
    2. 后端监听的主机、端口、域名、与CNAME响应
    3. HTTP BASIC AUTH的是否打开（check=true）与密码配置
-   4. 本计划写多域名的，所以domains写成了一个列表
 
 3. 域名准备
 
@@ -54,9 +53,15 @@
 
 ## 使用
 
-直接web访问进行使用。或者使用api接口。只有两个URI，
+直接web访问进行使用。或者使用api接口。
 
-1. /new_gen
+1. /get_domain
+
+   返回所有可选域名的JSON。对应toml中的配置项
+   `[ "dns.1433.eu.org","dns.bypass.eu.org"]`
+1. /(new_gen|get_sub_domain)?domain=xxxxx. 
+
+   (为了兼容之前的接口，只好这样了。)  
 
    生成子域名,返回格式如下：
 
@@ -76,10 +81,14 @@
    ```
 
    当然你也可以本地进行生成。不过要注意的是所有访问均进行了强制转换为小写，所以你自己本地生成的token要是一个 12 位的小写字符串。
+   
+   可以指定domain参数（/new_gen?domain=dns.1433.eu.org.），必须完全匹配列表中的返回项目，不指定或者不匹配则使用列表中的第一个。
 
 2. /$yourtoken
 
    通过访问/$yourtoken（此处也就是/iepdbo4yz1vn）可以获取到相关的DNS解析记录。返回为null或者正常数据的JSON形式。
+
+   可以指定domain参数（/$yourtoken?domain=dns.1433.eu.org.），必须完全匹配列表中的返回项目，不指定或者不匹配则使用列表中的第一个。不同域名之间的key不通用，内容不覆盖。
 
 
 PS：当然，你也可以通过 go build 打包成可执行文件进行跨平台或者离线运行。这都依赖于go的特性。
@@ -124,7 +133,7 @@ except:
 
 ## 更新日志：
 
-
++ 2021/12/17 又增加了50star。引入了多域名机制。修改了前端。
 + 2021/12/14 在log4j2漏洞影响下，破100star。引入http basic auth，改为toml文件修改配置。
 + 2021/4/3 引入token机制，保证隐私性。
 
