@@ -132,7 +132,7 @@ except:
 ```
 
 ## 更新日志：
-+ 2021/12/18 在Chrome版本>94时，参数中包含domain会产生CORS错误，详见其他问题1。修改为了Form，兼容GET与POST传参。为获取结果接口增加了固定URL。
++ 2021/12/18 其他问题1：修改为了Form，兼容GET与POST传参。为获取结果接口增加了固定URL。
 + 2021/12/17 又增加了50star。引入了多域名机制。修改了前端。
 + 2021/12/14 在log4j2漏洞影响下，破100star。引入http basic auth，改为toml文件修改配置。
 + 2021/4/3 引入token机制，保证隐私性。
@@ -142,6 +142,6 @@ except:
 
 ## 其他问题：
 
-1. 在版本>94的Chrome访问可能出现以下问题
+1. 在版本>94的Chrome且使用非https协议访问，并且在参数中出现domain 可能出现以下问题
 CORS：The request client is not a secure context and the resource is in more-private address space `local`.
 可参考 https://developer.chrome.com/blog/private-network-access-update/
