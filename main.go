@@ -114,19 +114,28 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := "Hello World"
-	if len(r.URL.Path) == 13 {
+	if len(r.URL.Path) == 13 || r.URL.Path == "/get_results" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-control", "no-store")
-		id := md5sum(strings.ToLower(r.URL.Path)[1:13])[0:8]
+		r.ParseForm()
+		key := "00000000"
+		if len(r.URL.Path) == 13 {
+			key = md5sum(strings.ToLower(r.URL.Path)[1:13])[0:8]
+		}
+		if len(r.Form["token"]) > 0 && len(r.Form["token"][0]) == 12 {
+			key = md5sum(strings.ToLower(r.Form["token"][0]))[0:8]
+		}
 		domain := topDomain[0]
-		for _, tmpdomain := range topDomain {
-			if strings.ToLower(r.URL.Query().Get("domain")) == tmpdomain {
-				domain = tmpdomain
-				break
+		if len(r.Form["domain"]) > 0 && r.Form["domain"][0] != "" {
+			for _, tmpdomain := range topDomain {
+				if strings.ToLower(r.Form["domain"][0]) == tmpdomain {
+					domain = tmpdomain
+					break
+				}
 			}
 		}
 
-		res = GetDnslog(id, domain)
+		res = GetDnslog(key, domain)
 	} else if r.URL.Path == "/new_gen" || r.URL.Path == "/get_sub_domain" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-control", "no-store")
@@ -135,12 +144,17 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 		key := md5sum(token)[0:8]
 		data := make(map[string]string)
 		data["domain"] = key + "." + topDomain[0]
-		for _, tmpdomain := range topDomain {
-			if strings.ToLower(r.URL.Query().Get("domain")) == tmpdomain {
-				data["domain"] = key + "." + tmpdomain
-				break
+		r.ParseForm()
+		if len(r.Form["domain"]) > 0 && r.Form["domain"][0] != "" {
+
+			for _, tmpdomain := range topDomain {
+				if strings.ToLower(r.Form["domain"][0]) == tmpdomain {
+					data["domain"] = key + "." + tmpdomain
+					break
+				}
 			}
 		}
+
 		data["token"] = token
 		data["key"] = key
 

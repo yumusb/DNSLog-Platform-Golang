@@ -82,13 +82,13 @@
 
    当然你也可以本地进行生成。不过要注意的是所有访问均进行了强制转换为小写，所以你自己本地生成的token要是一个 12 位的小写字符串。
    
-   可以指定domain参数（/new_gen?domain=dns.1433.eu.org.），必须完全匹配列表中的返回项目，不指定或者不匹配则使用列表中的第一个。
+   可以指定domain参数（/new_gen?domain=dns.1433.eu.org.，支持GET、POST），传入值必须完全匹配/get_domain接口返回列表之一，不指定或者不匹配则使用列表中的第一个。
 
-2. /$yourtoken
+2. /($yourtoken|get_results)
 
-   通过访问/$yourtoken（此处也就是/iepdbo4yz1vn）可以获取到相关的DNS解析记录。返回为null或者正常数据的JSON形式。
+   通过访问/$yourtoken（此处也就是/iepdbo4yz1vn）或者访问/get_results并传参（支持GET、POST）12位TOKEN（token=iepdbo4yz1vn）可以获取到相关的DNS解析记录。返回为null或者正常数据的JSON形式。
 
-   可以指定domain参数（/$yourtoken?domain=dns.1433.eu.org.），必须完全匹配列表中的返回项目，不指定或者不匹配则使用列表中的第一个。不同域名之间的key不通用，内容不覆盖。
+   可以指定domain参数（/$yourtoken?domain=dns.1433.eu.org.，支持GET、POST），传入值必须完全匹配/get_domain接口返回列表之一，不指定或者不匹配则使用列表中的第一个。不同域名之间的key不通用，内容不覆盖。也就是说在获取子域名时指定了域名，在此处也必须指定域名。
 
 
 PS：当然，你也可以通过 go build 打包成可执行文件进行跨平台或者离线运行。这都依赖于go的特性。
@@ -132,9 +132,16 @@ except:
 ```
 
 ## 更新日志：
-
++ 2021/12/18 在Chrome版本>94时，参数中包含domain会产生CORS错误，详见其他问题1。修改为了Form，兼容GET与POST传参。为获取结果接口增加了固定URL。
 + 2021/12/17 又增加了50star。引入了多域名机制。修改了前端。
 + 2021/12/14 在log4j2漏洞影响下，破100star。引入http basic auth，改为toml文件修改配置。
 + 2021/4/3 引入token机制，保证隐私性。
 
 + 1970-2021/4/2 初版本。
+
+
+## 其他问题：
+
+1. 在版本>94的Chrome访问可能出现以下问题
+CORS：The request client is not a secure context and the resource is in more-private address space `local`.
+可参考 https://developer.chrome.com/blog/private-network-access-update/

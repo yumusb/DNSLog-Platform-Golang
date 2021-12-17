@@ -25,7 +25,7 @@ function GetSubDomain() {
     var e = window.XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP");
     e.responseType = "json", e.onreadystatechange = function () {
         4 == e.readyState && 200 == e.status && (localStorage.setItem('key', e.response.domain), localStorage.setItem('token', e.response.token), document.getElementById("myDomain").innerHTML = e.response.domain, document.getElementById("token").innerHTML = e.response.token, GetRecords())
-    }, e.open("GET", "/new_gen?domain=" + getcurrentdomain() + "&t=" + Math.random(), !0), e.send()
+    }, e.open("POST", "/new_gen",true),e.setRequestHeader("Content-type","application/x-www-form-urlencoded"),e.send("domain=" + getcurrentdomain())
 }
 function SetDomain(obj) {
     options = "";
@@ -59,7 +59,7 @@ function GetRecords() {
                 document.getElementById("myRecords").innerHTML = table
             }
         }
-    }, n.open("GET", "/" + localStorage.getItem("token") + "?domain=" + getcurrentdomain() + "&t=" + Math.random(), !0), n.send()
+    }, n.open("POST", "/" + localStorage.getItem("token"), true),n.setRequestHeader("Content-type","application/x-www-form-urlencoded"),n.send("domain=" + getcurrentdomain() )
 }
 key = localStorage.getItem("key");
 token = localStorage.getItem("token");
