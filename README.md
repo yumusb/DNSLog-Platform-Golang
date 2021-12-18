@@ -142,6 +142,7 @@ except:
 
 ## 其他问题：
 
-1. 在版本>94的Chrome且使用非https协议访问，并且在参数中出现domain 可能出现以下问题
+1. 在版本>94的Chrome且使用非https协议访问，并且在GET参数中出现domain 可能出现以下问题
 CORS：The request client is not a secure context and the resource is in more-private address space `local`.
 可参考 https://developer.chrome.com/blog/private-network-access-update/
+2. 可能遇到非预期的退出问题。在`log.咕.com`实际运行中遇到过两次。但是线上环境中做了进程守护把日志给覆盖掉了。在测试环境中数据太小又无法复现。欢迎复现的大哥提交相关日志。
