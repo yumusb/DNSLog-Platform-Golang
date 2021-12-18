@@ -29,7 +29,16 @@ func Exists(path string) bool {
 	}
 	return true
 }
+func CheckSize(path string) bool {
+	fi, err := os.Stat(path)
+	if err == nil {
+		fmt.Println(path)
+		fmt.Println(fi.Size())
+		return fi.Size() < (1024 * 1024 * 50)
+	}
+	return true
 
+}
 func checkdir(path string) {
 	logdir := ""
 	if path == tmplogdir {
@@ -67,7 +76,7 @@ func randSeq(n int) string {
 func GetDnslog(id string, domain string) string {
 	content := "content"
 	path := tmplogdir + string(os.PathSeparator) + domain + string(os.PathSeparator) + id
-	if Exists(path) {
+	if Exists(path) && CheckSize(path) {
 		file, _ := os.Open(path)
 		defer file.Close()
 		tmpcontent, _ := ioutil.ReadAll(file)
