@@ -11,7 +11,7 @@ function getcurrentdomain() {
     if (index == undefined || index < 0) {
         index = 0
     }
-    if (myselect.options != undefined) {
+    if (myselect.options != undefined && myselect.options[index] != undefined) {
         localStorage.setItem("domain", myselect.options[index].value)
         return myselect.options[index].value;
     }
