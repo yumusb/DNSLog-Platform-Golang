@@ -44,7 +44,7 @@ function SetDomain(obj) {
     document.getElementById("domains").innerHTML = options;
 }
 function GetRecords() {
-    if (localStorage.getItem("token") == null) {
+    if (localStorage.getItem("token") == null || localStorage.getItem("domain") == null) {
         alert("Get Domain First!!")
         return;
     }
@@ -59,7 +59,7 @@ function GetRecords() {
                 document.getElementById("myRecords").innerHTML = table
             }
         }
-    }, n.open("POST", "/" + localStorage.getItem("token"), true),n.setRequestHeader("Content-type","application/x-www-form-urlencoded"),n.send("domain=" + getcurrentdomain() )
+    }, n.open("POST", "/" + localStorage.getItem("token"), true), n.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), n.send("domain=" + localStorage.getItem("domain"))
 }
 key = localStorage.getItem("key");
 token = localStorage.getItem("token");
