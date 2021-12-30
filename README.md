@@ -101,35 +101,6 @@ PS：当然，你也可以通过 go build 打包成可执行文件进行跨平�
 
 可以通过linux下命令行工具`host -t ns sub.youdomain.com`来确认NS服务器。也可以通过在线工具：https://myssl.com/dns_check.html （选择NS类型）
 
-## Demo
-
-```python
-#coding:utf-8
-import requests
-import json
-
-base = "http://localhost:8000/"
-try:
-	print("[-] try to get a subdomain.")
-	subdomaindata = requests.get(base+"new_gen",timeout=5).json()
-	token = subdomaindata['token']
-	subdomain = subdomaindata['domain']
-	print("[+] this is your subdomain [ %s ], try to resolve it!" % subdomain)
-	print("[+] this is your token [ %s ]" % token)
-	try:
-		requests.get("http://"+subdomain,timeout=2)
-	except:
-		pass
-	data = requests.get(base+token,timeout=5).text
-	if(data=="null"):
-		print("no data")
-	else:
-		res = json.loads(data)
-		for x in res:
-			print(res[x])
-except:
-	print("error")
-```
 
 ## 更新日志：
 + 2021/12/18 其他问题1：修改为了Form，兼容GET与POST传参。为获取结果接口增加了固定URL。
